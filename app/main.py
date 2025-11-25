@@ -40,10 +40,10 @@ def read_health():
 # User Registration Endpoint
 # ------------------------------------------------------------------------------
 @app.post(
-    "/auth/register", 
+    "/users/register", 
     response_model=UserResponse, 
     status_code=status.HTTP_201_CREATED,
-    tags=["auth"]
+    tags=["users"]
 )
 def register(user_create: UserCreate, db: Session = Depends(get_db)):
     # Exclude confirm_password before passing data to User.register
@@ -60,7 +60,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
 # ------------------------------------------------------------------------------
 # User Login Endpoints
 # ------------------------------------------------------------------------------
-@app.post("/auth/login", response_model=TokenResponse, tags=["auth"])
+@app.post("/users/login", response_model=TokenResponse, tags=["users"])
 def login_json(user_login: UserLogin, db: Session = Depends(get_db)):
     """Login with JSON payload"""
     auth_result = User.authenticate(db, user_login.username, user_login.password)
@@ -95,7 +95,7 @@ def login_json(user_login: UserLogin, db: Session = Depends(get_db)):
         is_verified=user.is_verified
     )
 
-@app.post("/auth/token", tags=["auth"])
+@app.post("/users/token", tags=["auth"])
 def login_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login with form data for Swagger UI"""
     auth_result = User.authenticate(db, form_data.username, form_data.password)
