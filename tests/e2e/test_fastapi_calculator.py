@@ -26,8 +26,8 @@ def register_and_login(base_url: str, user_data: dict) -> dict:
     """
     Registers a new user and logs in, returning the token response data.
     """
-    reg_url = f"{base_url}/auth/register"
-    login_url = f"{base_url}/auth/login"
+    reg_url = f"{base_url}/users/register"
+    login_url = f"{base_url}/users/login"
     
     reg_response = requests.post(reg_url, json=user_data)
     assert reg_response.status_code == 201, f"User registration failed: {reg_response.text}"
@@ -41,7 +41,7 @@ def register_and_login(base_url: str, user_data: dict) -> dict:
     return login_response.json()
 
 # ---------------------------------------------------------------------------
-# Health and Auth Endpoint Tests
+# Health and User Endpoint Tests
 # ---------------------------------------------------------------------------
 def test_health_endpoint(base_url: str):
     url = f"{base_url}/health"
@@ -50,7 +50,7 @@ def test_health_endpoint(base_url: str):
     assert response.json() == {"status": "ok"}, "Unexpected response from /health."
 
 def test_user_registration(base_url: str):
-    url = f"{base_url}/auth/register"
+    url = f"{base_url}/users/register"
     payload = {
         "first_name": "Alice",
         "last_name": "Smith",
@@ -72,8 +72,8 @@ def test_user_registration(base_url: str):
     assert data["is_verified"] is False
 
 def test_user_login(base_url: str):
-    reg_url = f"{base_url}/auth/register"
-    login_url = f"{base_url}/auth/login"
+    reg_url = f"{base_url}/users/register"
+    login_url = f"{base_url}/users/login"
     
     test_user = {
         "first_name": "Bob",

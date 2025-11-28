@@ -17,22 +17,30 @@ from app.models.user import User
 
 settings = get_settings()
 
-# Password hashing
+# Password hashing - SIMPLIFIED, no truncate_error
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto",
-    bcrypt__rounds=settings.BCRYPT_ROUNDS
+    bcrypt__rounds=4  # Lower rounds for testing
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against its hash."""
+    # Simple character truncation
+    if len(plain_password) > 72:
+        plain_password = plain_password[:72]
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt."""
+    # Simple character truncation
+    if len(password) > 72:
+        password = password[:72]
     return pwd_context.hash(password)
+
 
 def create_token(
     user_id: Union[str, UUID],

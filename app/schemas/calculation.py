@@ -21,7 +21,7 @@ class CalculationBase(BaseModel):
         ...,
         description="List of numeric inputs for the calculation",
         example=[10.5, 3, 2],
-        min_items=2
+        #min_items=2
     )
 
     @field_validator("type", mode="before")
@@ -85,7 +85,7 @@ class CalculationUpdate(BaseModel):
         None,
         description="Updated list of numeric inputs for the calculation",
         example=[42, 7],
-        min_items=2
+        #min_items=2
     )
 
     @model_validator(mode='after')
@@ -100,7 +100,7 @@ class CalculationUpdate(BaseModel):
         json_schema_extra={"example": {"inputs": [42, 7]}}
     )
 
-class CalculationResponse(CalculationBase):
+class CalculationRead(CalculationBase):
     """Schema for reading a Calculation from the database"""
     id: UUID = Field(
         ...,

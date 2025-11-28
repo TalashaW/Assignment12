@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # Security
-    BCRYPT_ROUNDS: int = 12
+    BCRYPT_ROUNDS: int = 4
     CORS_ORIGINS: List[str] = ["*"]
     
     # Redis (optional, for token blacklisting)

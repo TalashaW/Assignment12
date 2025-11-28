@@ -1,4 +1,5 @@
 import pytest
+from app.database import get_db
 from unittest.mock import patch, MagicMock
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
@@ -53,3 +54,26 @@ def test_get_sessionmaker(mock_settings):
     engine = database.get_engine()
     SessionLocal = database.get_sessionmaker(engine)
     assert isinstance(SessionLocal, sessionmaker)
+
+@pytest.mark.integration
+def test_get_db_yields_session():
+    """Test that get_db yields a working database session."""
+    db_gen = get_db()
+    
+    # Get the session from the generator
+    db = next(db_gen)
+    
+    # Verify it's a valid session
+    assert db is not None
+    from sqlalchemy.orm import Session
+    assert isinstance(db, Session)
+    
+    # Close the generator
+    try:
+        next(db_gen)
+    except StopIteration:
+        pass
+    
+    # Verify session is closed (attempting to use it should fail)
+    with pytest.raises(Exception):
+        db.execute("SELECT 1")

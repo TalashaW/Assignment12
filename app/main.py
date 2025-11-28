@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth.dependencies import get_current_active_user
 from app.models.calculation import Calculation
 from app.models.user import User
-from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate
+from app.schemas.calculation import CalculationBase, CalculationRead, CalculationRead, CalculationUpdate
 from app.schemas.token import TokenResponse
 from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.database import Base, get_db, engine
@@ -47,7 +47,7 @@ def read_health():
 )
 def register(user_create: UserCreate, db: Session = Depends(get_db)):
     # Exclude confirm_password before passing data to User.register
-    user_data = user_create.dict(exclude={"confirm_password"})
+    user_data = user_create.model_dump(exclude={"confirm_password"})
     try:
         user = User.register(db, user_data)
         db.commit()
@@ -117,7 +117,7 @@ def login_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
 # Create (Add) Calculation – using CalculationBase so that 'user_id' from the client is ignored.
 @app.post(
     "/calculations",
-    response_model=CalculationResponse,
+    response_model=CalculationRead,
     status_code=status.HTTP_201_CREATED,
     tags=["calculations"],
 )
@@ -155,7 +155,7 @@ def create_calculation(
         )
 
 # Browse / List Calculations (for the current user)
-@app.get("/calculations", response_model=List[CalculationResponse], tags=["calculations"])
+@app.get("/calculations", response_model=List[CalculationRead], tags=["calculations"])
 def list_calculations(
     current_user = Depends(get_current_active_user),
     db: Session = Depends(get_db)
@@ -164,7 +164,7 @@ def list_calculations(
     return calculations
 
 # Read / Retrieve a Specific Calculation by ID
-@app.get("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+@app.get("/calculations/{calc_id}", response_model=CalculationRead, tags=["calculations"])
 def get_calculation(
     calc_id: str,
     current_user = Depends(get_current_active_user),
@@ -183,7 +183,7 @@ def get_calculation(
     return calculation
 
 # Edit / Update a Calculation
-@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+@app.put("/calculations/{calc_id}", response_model=CalculationRead, tags=["calculations"])
 def update_calculation(
     calc_id: str,
     calculation_update: CalculationUpdate,

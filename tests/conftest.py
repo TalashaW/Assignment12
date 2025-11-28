@@ -1,3 +1,5 @@
+import os
+os.environ["TESTING"] = "1"
 import socket
 import subprocess
 import time
@@ -45,9 +47,8 @@ def create_fake_user() -> Dict[str, str]:
         "last_name": fake.last_name(),
         "email": fake.unique.email(),
         "username": fake.unique.user_name(),
-        "password": fake.password(length=12)
+        "password": "TestPass123!"  # Use simple ASCII password instead of fake.password()
     }
-
 @contextmanager
 def managed_db_session():
     """Context manager for safe database session handling."""
@@ -84,13 +85,63 @@ class ServerStartupError(Exception):
     pass
 
 # ======================================================================================
+# Pytest Hooks - Determine if DB is needed
+# ======================================================================================
+def pytest_configure(config):
+    """Configure custom markers"""
+    config.addinivalue_line(
+        "markers", "unit: mark test as a unit test (no database required)"
+    )
+    config.addinivalue_line(
+        "markers", "integration: mark test as an integration test (database required)"
+    )
+
+def needs_database(item):
+    """
+    Determine if a test needs database access.
+    
+    Rules:
+    1. If test is marked with @pytest.mark.unit, no database
+    2. If test is in tests/unit/ directory, no database
+    3. If test uses db_session fixture, needs database
+    4. If test is marked with @pytest.mark.integration, needs database
+    5. If test is in tests/integration/ directory, needs database
+    6. Otherwise, assume no database needed
+    """
+    # Check for explicit unit marker
+    if item.get_closest_marker("unit"):
+        return False
+    
+    # Check if test is in unit directory
+    test_path = str(item.fspath)
+    if "/unit/" in test_path or "\\unit\\" in test_path:
+        return False
+    
+    # Check for integration marker
+    if item.get_closest_marker("integration"):
+        return True
+    
+    # Check if test is in integration directory
+    if "/integration/" in test_path or "\\integration\\" in test_path:
+        return True
+    
+    # Check if test uses database fixtures
+    db_fixtures = ["db_session", "test_user", "seed_users", "fake_user_data"]
+    for fixture in db_fixtures:
+        if fixture in item.fixturenames:
+            return True
+    
+    # Default: no database needed
+    return False
+
+# ======================================================================================
 # Database Fixtures
 # ======================================================================================
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_database(request):
+@pytest.fixture(scope="session")
+def _setup_test_database(request):
     """
-    Set up the test database before the session starts, and tear it down after tests
-    unless --preserve-db is provided.
+    Internal fixture to set up the test database.
+    This is NOT autouse - it's only called when needed.
     """
     logger.info("Setting up test database...")
     try:
@@ -109,10 +160,13 @@ def setup_test_database(request):
         drop_db()
 
 @pytest.fixture
-def db_session() -> Generator[Session, None, None]:
+def db_session(_setup_test_database) -> Generator[Session, None, None]:
     """
     Provide a test-scoped database session. Commits after a successful test;
     rolls back if an exception occurs.
+    
+    This fixture depends on _setup_test_database, which ensures the database
+    is initialized before any test that needs it.
     """
     session = TestingSessionLocal()
     try:
@@ -138,6 +192,8 @@ def test_user(db_session: Session) -> User:
     Create and return a single test user in the database.
     """
     user_data = create_fake_user()
+    # Hash password before creating user
+    user_data['password'] = User.hash_password(user_data['password'])
     user = User(**user_data)
     db_session.add(user)
     db_session.commit()
@@ -152,7 +208,13 @@ def seed_users(db_session: Session, request) -> List[User]:
     unless a 'param' value is provided (e.g., via @pytest.mark.parametrize).
     """
     num_users = getattr(request, "param", 5)
-    users = [User(**create_fake_user()) for _ in range(num_users)]
+    users = []
+    for _ in range(num_users):
+        user_data = create_fake_user()
+        # Hash password before creating user
+        user_data['password'] = User.hash_password(user_data['password'])
+        users.append(User(**user_data))
+    
     db_session.add_all(users)
     db_session.commit()
     logger.info(f"Seeded {len(users)} users.")

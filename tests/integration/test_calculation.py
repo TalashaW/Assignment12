@@ -150,3 +150,75 @@ def test_invalid_inputs_for_division():
     division = Division(user_id=dummy_user_id(), inputs=[10])
     with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers."):
         division.get_result()
+
+@pytest.mark.unit
+def test_addition_invalid_inputs_not_list():
+    """Test Addition.get_result with non-list inputs"""
+    addition = Addition(user_id=dummy_user_id(), inputs="not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        addition.get_result()
+
+
+@pytest.mark.unit
+def test_addition_insufficient_inputs():
+    """Test Addition.get_result with less than 2 inputs"""
+    addition = Addition(user_id=dummy_user_id(), inputs=[10])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        addition.get_result()
+
+
+@pytest.mark.unit
+def test_subtraction_invalid_inputs_not_list():
+    """Test Subtraction.get_result with non-list inputs"""
+    subtraction = Subtraction(user_id=dummy_user_id(), inputs="not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        subtraction.get_result()
+
+
+@pytest.mark.unit
+def test_subtraction_insufficient_inputs():
+    """Test Subtraction.get_result with less than 2 inputs"""
+    subtraction = Subtraction(user_id=dummy_user_id(), inputs=[10])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        subtraction.get_result()
+
+
+@pytest.mark.unit
+def test_multiplication_invalid_inputs_not_list():
+    """Test Multiplication.get_result with non-list inputs"""
+    multiplication = Multiplication(user_id=dummy_user_id(), inputs="not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        multiplication.get_result()
+
+
+@pytest.mark.unit
+def test_multiplication_insufficient_inputs():
+    """Test Multiplication.get_result with less than 2 inputs"""
+    multiplication = Multiplication(user_id=dummy_user_id(), inputs=[10])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        multiplication.get_result()
+
+
+@pytest.mark.unit
+def test_division_invalid_inputs_not_list():
+    """Test Division.get_result with non-list inputs"""
+    division = Division(user_id=dummy_user_id(), inputs="not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        division.get_result()
+
+
+@pytest.mark.unit
+def test_division_insufficient_inputs():
+    """Test Division.get_result with less than 2 inputs"""
+    division = Division(user_id=dummy_user_id(), inputs=[10])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        division.get_result()
+
+
+@pytest.mark.unit
+def test_division_by_zero():
+    """Test that Division.get_result raises ValueError when dividing by zero."""
+    inputs = [50, 0, 5]
+    division = Division(user_id=dummy_user_id(), inputs=inputs)
+    with pytest.raises(ValueError, match="Cannot divide by zero"):
+        division.get_result()

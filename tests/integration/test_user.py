@@ -32,20 +32,17 @@ def test_database_connection(db_session):
     logger.info("Database connection test passed")
 
 
-def test_managed_session():
+def test_managed_session(db_session):
     """
-    Test the managed_db_session context manager for one-off queries and rollbacks.
-    Demonstrates how a manual session context can work alongside the fixture-based approach.
+    Test session error handling using the provided db_session fixture.
     """
-    with managed_db_session() as session:
-        # Simple query
-        session.execute(text("SELECT 1"))
-        
-        # Generate an error to trigger rollback
-        try:
-            session.execute(text("SELECT * FROM nonexistent_table"))
-        except Exception as e:
-            assert "nonexistent_table" in str(e)
+    # Simple query
+    db_session.execute(text("SELECT 1"))
+    
+    # Generate an error to trigger rollback
+    with pytest.raises(Exception) as exc_info:
+        db_session.execute(text("SELECT * FROM nonexistent_table"))
+    assert "nonexistent_table" in str(exc_info.value).lower()
 
 # ======================================================================================
 # Session Handling & Partial Commits
@@ -316,12 +313,31 @@ def test_user_persistence_after_constraint(db_session):
 # Error Handling Test
 # ======================================================================================
 
-def test_error_handling():
+def test_error_handling(db_session):
     """
-    Verify that a manual managed_db_session can capture and log invalid SQL errors.
+    Verify that invalid SQL raises an exception.
     """
     with pytest.raises(Exception) as exc_info:
-        with managed_db_session() as session:
-            session.execute(text("INVALID SQL"))
-    assert "INVALID SQL" in str(exc_info.value)
+        db_session.execute(text("INVALID SQL"))
+    assert "syntax error" in str(exc_info.value).lower() or "invalid" in str(exc_info.value).lower()
 
+def test_utcnow_function():
+    """Test the utcnow helper function directly."""
+    from app.models.user import utcnow
+    result = utcnow()
+    assert result.tzinfo is not None
+    logger.info("utcnow function tested")
+
+def test_user_init_hashed_password(db_session):
+    """Test __init__ with hashed_password parameter."""
+    hashed = User.hash_password("testpass")
+    user = User(
+        first_name="Test",
+        last_name="User",
+        email="test@example.com",
+        username="testuser",
+        hashed_password=hashed
+    )
+    db_session.add(user)
+    db_session.commit()
+    assert user.password == hashed

@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .DS_Store
 .coverage
+.coverage.*
+coverage.xml
+*.py[cod]
 .pytest_cache
 htmlcov
 .env

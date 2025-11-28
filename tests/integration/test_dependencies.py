@@ -103,3 +103,52 @@ def test_get_current_active_user_inactive(mock_verify_token):
 
     assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
     assert exc_info.value.detail == "Inactive user"
+
+# Test get_current_user with minimal payload (dict with only 'sub')
+def test_get_current_user_minimal_payload_with_sub(mock_verify_token):
+    """Test when verify_token returns dict with only 'sub' key"""
+    user_id = uuid4()
+    mock_verify_token.return_value = {"sub": user_id}
+    
+    user_response = get_current_user(token="validtoken")
+    
+    assert isinstance(user_response, UserResponse)
+    assert user_response.id == user_id
+    assert user_response.username == "unknown"
+    assert user_response.email == "unknown@example.com"
+    assert user_response.first_name == "Unknown"
+    assert user_response.last_name == "User"
+    assert user_response.is_active is True
+    assert user_response.is_verified is False
+    mock_verify_token.assert_called_once_with("validtoken")
+
+
+# Test get_current_user with UUID directly (not dict)
+def test_get_current_user_uuid_payload(mock_verify_token):
+    """Test when verify_token returns UUID directly"""
+    user_id = uuid4()
+    mock_verify_token.return_value = user_id  # Return UUID directly, not dict
+    
+    user_response = get_current_user(token="validtoken")
+    
+    assert isinstance(user_response, UserResponse)
+    assert user_response.id == user_id
+    assert user_response.username == "unknown"
+    assert user_response.email == "unknown@example.com"
+    assert user_response.first_name == "Unknown"
+    assert user_response.last_name == "User"
+    assert user_response.is_active is True
+    assert user_response.is_verified is False
+    mock_verify_token.assert_called_once_with("validtoken")
+
+# Test get_current_user with invalid token data type
+def test_get_current_user_invalid_token_data_type(mock_verify_token):
+    """Test when verify_token returns an invalid type"""
+    mock_verify_token.return_value = "invalid_string"  # Not dict or UUID
+    
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user(token="validtoken")
+    
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert exc_info.value.detail == "Could not validate credentials"
+    mock_verify_token.assert_called_once_with("validtoken")
