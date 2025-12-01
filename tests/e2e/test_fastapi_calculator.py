@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 from uuid import uuid4
 import pytest
 import requests
+from unittest.mock import patch
 
+
+from app.models.user import User
 # Import the Calculation model for direct model tests.
 from app.models.calculation import Calculation
 
@@ -318,3 +321,381 @@ def test_model_division():
     with pytest.raises(ValueError):
         calc_zero = Calculation.create("division", dummy_user_id, [100, 0])
         calc_zero.get_result()
+
+#--------------------------------------------------------
+#           Calculation tests
+#---------------------------------------------------------
+def test_model_unsupported_calculation_type():
+    """Test that unsupported calculation type raises ValueError"""
+    dummy_user_id = uuid4()
+    with pytest.raises(ValueError, match="Unsupported calculation type"):
+        Calculation.create("modulus", dummy_user_id, [10, 3])
+
+
+def test_model_addition_invalid_inputs():
+    """Test Addition with non-list inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("addition", dummy_user_id, "not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        calc.get_result()
+
+
+def test_model_addition_insufficient_inputs():
+    """Test Addition with less than 2 inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("addition", dummy_user_id, [5])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        calc.get_result()
+
+
+def test_model_subtraction_invalid_inputs():
+    """Test Subtraction with non-list inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("subtraction", dummy_user_id, "not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        calc.get_result()
+
+
+def test_model_subtraction_insufficient_inputs():
+    """Test Subtraction with less than 2 inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("subtraction", dummy_user_id, [10])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        calc.get_result()
+
+
+def test_model_multiplication_invalid_inputs():
+    """Test Multiplication with non-list inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("multiplication", dummy_user_id, "not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        calc.get_result()
+
+
+def test_model_multiplication_insufficient_inputs():
+    """Test Multiplication with less than 2 inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("multiplication", dummy_user_id, [5])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        calc.get_result()
+
+
+def test_model_division_invalid_inputs():
+    """Test Division with non-list inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("division", dummy_user_id, "not-a-list")
+    with pytest.raises(ValueError, match="Inputs must be a list of numbers"):
+        calc.get_result()
+
+
+def test_model_division_insufficient_inputs():
+    """Test Division with less than 2 inputs"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("division", dummy_user_id, [100])
+    with pytest.raises(ValueError, match="Inputs must be a list with at least two numbers"):
+        calc.get_result()
+
+
+def test_calculation_repr():
+    """Test __repr__ method for string representation"""
+    dummy_user_id = uuid4()
+    calc = Calculation.create("addition", dummy_user_id, [1, 2, 3])
+    calc.type = "addition"  # Ensure type is set
+    repr_str = repr(calc)
+    assert "Calculation" in repr_str
+    assert "addition" in repr_str or "type=" in repr_str
+
+#--------------------------------------------------------
+#           User Model Direct Tests
+#---------------------------------------------------------
+
+def test_utcnow_function():
+    """Test the utcnow helper function (line 16)"""
+    from app.models.user import utcnow
+    result = utcnow()
+    assert result.tzinfo is not None
+    assert result.tzinfo == timezone.utc
+
+
+def test_user_init_with_hashed_password():
+    """Test __init__ with hashed_password parameter)"""
+    from app.models.user import User
+    
+    # Just test that hashed_password parameter gets converted to password
+    user = User(
+        first_name="Test",
+        last_name="User",
+        email="hashed@example.com",
+        username="hasheduser",
+        hashed_password="some_already_hashed_value"  # Just a string
+    )
+    
+    # Verify that hashed_password was converted to password field
+    assert user.password == "some_already_hashed_value"
+
+
+def test_user_string_representation():
+    """Test __str__ method (line 53)"""
+    from app.models.user import User
+    
+    user = User(
+        first_name="John",
+        last_name="Doe",
+        email="john@example.com",
+        username="johndoe",
+        password="hashedpass"
+    )
+    
+    expected = f"<User(name=John Doe, email=john@example.com)>"
+    assert str(user) == expected
+
+
+def test_user_update_method():
+    """Test update() method"""
+    from app.models.user import User
+    from app.models.user import utcnow
+    import time
+    
+    user = User(
+        first_name="Original",
+        last_name="Name",
+        email="original@example.com",
+        username="originaluser",
+        password="hashedpass"
+    )
+    
+    # Set initial updated_at
+    user.updated_at = utcnow()
+    original_updated_at = user.updated_at
+    
+    # Wait a tiny bit to ensure time difference
+    time.sleep(0.01)
+    
+    # Call update method
+    result = user.update(first_name="Updated", last_name="NewName")
+    
+    # Verify attributes were updated
+    assert user.first_name == "Updated"
+    assert user.last_name == "NewName"
+    # Verify updated_at was refreshed
+    assert user.updated_at > original_updated_at
+    # Verify it returns self
+    assert result == user
+
+
+
+def test_hashed_password_property():
+    """Test hashed_password property"""
+    from app.models.user import User
+    
+    # Don't hash - just use a plain string to test the property
+    user = User(
+        first_name="Test",
+        last_name="User",
+        email="prop@example.com",
+        username="propuser",
+        password="plain_password_value"  # Not hashed
+    )
+    
+    # Test the property returns the password
+    assert user.hashed_password == "plain_password_value"
+    assert user.hashed_password == user.password
+
+
+def test_register_duplicate_username(base_url: str):
+    """Test that registering with duplicate username fails"""
+    user_data = {
+        "first_name": "Duplicate",
+        "last_name": "User",
+        "email": f"dup1{uuid4()}@example.com",
+        "username": "duplicate_username_test",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    
+    # Register first time
+    response1 = requests.post(f"{base_url}/users/register", json=user_data)
+    assert response1.status_code == 201
+    
+    # Try again with different email but same username
+    user_data["email"] = f"dup2{uuid4()}@example.com"
+    response2 = requests.post(f"{base_url}/users/register", json=user_data)
+    assert response2.status_code == 400
+    assert "already exists" in response2.json()["detail"].lower()
+
+
+def test_register_duplicate_email(base_url: str):
+    """Test that registering with duplicate email fails"""
+    email = f"duplicate{uuid4()}@example.com"
+    user_data1 = {
+        "first_name": "User",
+        "last_name": "One",
+        "email": email,
+        "username": f"user1_{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    
+    # Register first time
+    response1 = requests.post(f"{base_url}/users/register", json=user_data1)
+    assert response1.status_code == 201
+    
+    # Try again with different username but same email
+    user_data2 = {
+        "first_name": "User",
+        "last_name": "Two",
+        "email": email,
+        "username": f"user2_{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    response2 = requests.post(f"{base_url}/users/register", json=user_data2)
+    assert response2.status_code == 400
+    assert "already exists" in response2.json()["detail"].lower()
+
+
+def test_login_with_email(base_url: str):
+    """Test login using email instead of username"""
+    user_data = {
+        "first_name": "Email",
+        "last_name": "Login",
+        "email": f"email.login{uuid4()}@example.com",
+        "username": f"emaillogin{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    
+    # Register user
+    requests.post(f"{base_url}/users/register", json=user_data)
+    
+    # Try login with email (tests authenticate method)
+    login_payload = {
+        "username": user_data["email"],  # Using email as username
+        "password": user_data["password"]
+    }
+    response = requests.post(f"{base_url}/users/login", json=login_payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+
+
+def test_login_wrong_password(base_url: str):
+    """Test login with wrong password"""
+    user_data = {
+        "first_name": "Wrong",
+        "last_name": "Pass",
+        "email": f"wrong.pass{uuid4()}@example.com",
+        "username": f"wrongpass{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    
+    # Register user
+    requests.post(f"{base_url}/users/register", json=user_data)
+    
+    # Try login with wrong password
+    login_payload = {
+        "username": user_data["username"],
+        "password": "WrongPassword456!"
+    }
+    response = requests.post(f"{base_url}/users/login", json=login_payload)
+    assert response.status_code == 401
+
+
+def test_login_nonexistent_user(base_url: str):
+    """Test login with user that doesn't exist"""
+    login_payload = {
+        "username": f"nonexistent{uuid4()}",
+        "password": "SomePassword123!"
+    }
+    response = requests.post(f"{base_url}/users/login", json=login_payload)
+    assert response.status_code == 401
+
+
+def test_register_password_too_short(base_url: str):
+    """Test registration with password that's too short"""
+    user_data = {
+        "first_name": "Short",
+        "last_name": "Pass",
+        "email": f"short{uuid4()}@example.com",
+        "username": f"shortpass{uuid4()}",
+        "password": "Sh0r!",  # Only 5 characters
+        "confirm_password": "Sh0r!"
+    }
+    
+    response = requests.post(f"{base_url}/users/register", json=user_data)
+    assert response.status_code in [400, 422]
+
+
+def test_unauthorized_calculation_access(base_url: str):
+    """Test accessing calculations without authentication"""
+    response = requests.get(f"{base_url}/calculations")
+    assert response.status_code in [401, 403]
+
+
+def test_create_calculation_without_auth(base_url: str):
+    """Test creating calculation without authentication"""
+    payload = {
+        "type": "addition",
+        "inputs": [1, 2, 3],
+    }
+    response = requests.post(f"{base_url}/calculations", json=payload)
+    assert response.status_code in [401, 403]
+
+
+def test_invalid_calculation_id_format(base_url: str):
+    """Test accessing calculation with invalid UUID format"""
+    user_data = {
+        "first_name": "Invalid",
+        "last_name": "ID",
+        "email": f"invalid{uuid4()}@example.com",
+        "username": f"invalidid{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    token_data = register_and_login(base_url, user_data)
+    headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+    
+    response = requests.get(f"{base_url}/calculations/not-a-uuid", headers=headers)
+    assert response.status_code == 400
+
+
+def test_update_nonexistent_calculation(base_url: str):
+    """Test updating a calculation that doesn't exist"""
+    user_data = {
+        "first_name": "Update",
+        "last_name": "None",
+        "email": f"update.none{uuid4()}@example.com",
+        "username": f"updatenone{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    token_data = register_and_login(base_url, user_data)
+    headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+    
+    fake_id = str(uuid4())
+    response = requests.put(
+        f"{base_url}/calculations/{fake_id}",
+        json={"inputs": [1, 2]},
+        headers=headers
+    )
+    assert response.status_code == 404
+
+
+def test_delete_nonexistent_calculation(base_url: str):
+    """Test deleting a calculation that doesn't exist"""
+    user_data = {
+        "first_name": "Delete",
+        "last_name": "None",
+        "email": f"delete.none{uuid4()}@example.com",
+        "username": f"deletenone{uuid4()}",
+        "password": "SecurePass123!",
+        "confirm_password": "SecurePass123!"
+    }
+    token_data = register_and_login(base_url, user_data)
+    headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+    
+    fake_id = str(uuid4())
+    response = requests.delete(f"{base_url}/calculations/{fake_id}", headers=headers)
+    assert response.status_code == 404

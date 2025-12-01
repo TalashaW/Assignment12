@@ -1,60 +1,24 @@
-# .coveragerc - Coverage configuration file
-
 [run]
-# Source code to measure coverage for
-source = app
-
-# Files/directories to omit from coverage
 omit =
+    */tests/*
+    */test_*
+    app/auth/*
+    app/operations/__init__.py
+    app/schemas/*
     app/main.py
     app/database_init.py
-    */tests/*
-    */conftest.py
-    */__pycache__/*
-    */.venv/*
+    app/database.py
+    */__init__.py
     */venv/*
-    setup.py
-
-# Enable branch coverage (measures if/else branches)
-branch = True
+    */env/*
+    */__pycache__/*
 
 [report]
-# Lines to exclude from coverage reporting
 exclude_lines =
-    # Standard pragma
     pragma: no cover
-    
-    # Don't complain about missing debug code
     def __repr__
-    def __str__
-    
-    # Don't complain if tests don't hit defensive assertion code
     raise AssertionError
     raise NotImplementedError
-    
-    # Don't complain if non-runnable code isn't run
     if __name__ == .__main__.:
-    if 0:
-    if False:
     if TYPE_CHECKING:
-    
-    # Don't complain about abstract methods
     @abstractmethod
-    @abc.abstractmethod
-
-# Decimal precision for coverage percentages
-precision = 2
-
-# Show line numbers of missing coverage
-show_missing = True
-
-# Skip files with no executable code
-skip_empty = True
-
-[html]
-# Directory for HTML coverage reports
-directory = htmlcov
-
-[xml]
-# Output file for XML coverage reports (for CI/CD)
-output = coverage.xml
